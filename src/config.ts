@@ -82,11 +82,11 @@ function parseAllowedHosts(raw: string | undefined): string[] {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
-  const timeoutMs = parseTimeout(env.TIMEOUT, 120_000);
+  const timeoutMs = parseTimeout(env.TIMEOUT, 190_000);
   return {
     ollama: {
       baseUrl: parseUrl(env.OLLAMA_URL || "http://localhost:11434", "OLLAMA_URL"),
-      defaultModel: env.OLLAMA_MODEL || "qwen3.5:9b-nvfp4",
+      defaultModel: env.OLLAMA_MODEL || "qwen3.5:9b-mlx",
       timeoutMs,
     },
     lmstudio: {
