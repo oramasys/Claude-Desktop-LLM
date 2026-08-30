@@ -91,7 +91,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     },
     lmstudio: {
       baseUrl: parseUrl(env.LMSTUDIO_URL || "http://localhost:1234", "LMSTUDIO_URL"),
-      defaultModel: env.LMSTUDIO_MODEL || "default",
+      defaultModel: env.LMSTUDIO_MODEL || "qwen3.5-9b-mlx",
       timeoutMs,
     },
     activeProvider: parseProvider(resolveActiveProviderEnv(env)),

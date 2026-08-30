@@ -52,7 +52,7 @@ settings below) in the extension's config panel.
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama server URL |
 | `OLLAMA_MODEL` | `qwen3.5:9b-mlx` | Default Ollama model (Apple Silicon-native MLX build; see https://ollama.com/library/qwen3.5:9b-mlx) |
 | `LMSTUDIO_URL` | `http://localhost:1234` | LM Studio server URL |
-| `LMSTUDIO_MODEL` | `default` | Default LM Studio model |
+| `LMSTUDIO_MODEL` | `qwen3.5-9b-mlx` | Default LM Studio model |
 | `ACTIVE_PROVIDER` | `ollama` | `ollama` \| `lmstudio`. `DEFAULT_PROVIDER` is a deprecated alias for one release window -- `ACTIVE_PROVIDER` always wins if both are set. |
 | `TIMEOUT` | `190000` | Request timeout (ms). Raised from 120000 to give thinking-capable models (e.g. `qwen3.5:9b-mlx`) headroom for their hidden reasoning trace on non-trivial prompts. |
 | `ALLOW_REMOTE_LLM` | `0` | Set to `1` to permit a non-loopback provider URL (LAN/remote). Local-only (loopback) by default. |
