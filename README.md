@@ -50,7 +50,7 @@ settings below) in the extension's config panel.
 | Variable | Default | Description |
 |---|---|---|
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama server URL |
-| `OLLAMA_MODEL` | `llama3.2` | Default Ollama model |
+| `OLLAMA_MODEL` | `qwen3.5:9b-nvfp4` | Default Ollama model |
 | `LMSTUDIO_URL` | `http://localhost:1234` | LM Studio server URL |
 | `LMSTUDIO_MODEL` | `default` | Default LM Studio model |
 | `ACTIVE_PROVIDER` | `ollama` | `ollama` \| `lmstudio`. `DEFAULT_PROVIDER` is a deprecated alias for one release window -- `ACTIVE_PROVIDER` always wins if both are set. |

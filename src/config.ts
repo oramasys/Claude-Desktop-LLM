@@ -86,7 +86,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   return {
     ollama: {
       baseUrl: parseUrl(env.OLLAMA_URL || "http://localhost:11434", "OLLAMA_URL"),
-      defaultModel: env.OLLAMA_MODEL || "llama3.2",
+      defaultModel: env.OLLAMA_MODEL || "qwen3.5:9b-nvfp4",
       timeoutMs,
     },
     lmstudio: {
