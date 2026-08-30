@@ -1,6 +1,6 @@
 {
   "name": "mcp-local-llm",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "MCP server to connect Claude Desktop to local LLMs (Ollama, LM Studio) -- single canonical TypeScript implementation",
   "main": "dist/entrypoints/combined.js",
   "bin": {
