@@ -154,6 +154,32 @@ describe("endpoint policy", () => {
     }
   });
 
+  test("guardedFetch reaches a real server via a HOSTNAME target, not just an IP literal", async () => {
+    // Regression test for a real bug: pinnedDispatcher's custom connect.lookup
+    // only handled the (address, family) callback form. Node 22's
+    // net.Socket.connect requests Happy-Eyeballs-style lookups
+    // (options.all === true) for any HOSTNAME target -- IP-literal targets
+    // never invoke connect.lookup at all, which is why the ephemeral-server
+    // test above (using a bare 127.0.0.1 literal) never caught this: it threw
+    // "TypeError: Invalid IP address: undefined" for every real hostname-based
+    // request, including the documented default OLLAMA_URL=http://localhost:11434.
+    const server = createServer((_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    const port = typeof address === "object" && address ? address.port : 0;
+    try {
+      const response = await guardedFetch(`http://localhost:${port}/`, {}, DENY_ALL);
+      assert.equal(response.status, 200);
+      const body = (await response.json()) as { ok: boolean };
+      assert.equal(body.ok, true);
+    } finally {
+      server.close();
+    }
+  });
+
   test("redirect to a denied non-loopback target is not silently followed", async () => {
     const server = createServer((_req, res) => {
       // IP literal -- deterministic, no real DNS/network dependency.

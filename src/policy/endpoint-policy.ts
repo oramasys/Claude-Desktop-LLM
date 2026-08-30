@@ -218,13 +218,27 @@ export async function validateAndPin(
  * used for the handshake or the request line).
  */
 function pinnedDispatcher(pinnedIp: string): UndiciAgent {
+  const family = isIP(pinnedIp) === 6 ? 6 : 4;
   return new UndiciAgent({
     connect: {
       // Same signature as node:dns.lookup -- undici calls this in place of
       // its own DNS resolution, so returning the already-vetted IP here is
-      // what actually pins the TCP connection.
-      lookup: (_hostname, _options, callback) => {
-        callback(null, pinnedIp, isIP(pinnedIp) === 6 ? 6 : 4);
+      // what actually pins the TCP connection. Node 22's net.Socket.connect
+      // requests Happy-Eyeballs-style lookups (options.all === true) for any
+      // hostname target -- verified directly: dns.lookup's own "all" mode
+      // requires an array of {address, family} objects, not a bare
+      // (address, family) pair, and passing the bare form here throws
+      // "Invalid IP address: undefined" downstream in node:net. IP-literal
+      // targets never reach this lookup at all (net skips DNS resolution for
+      // them), which is why this only broke real hostname-based defaults
+      // (e.g. OLLAMA_URL=http://localhost:11434) and not the test suite's
+      // 127.0.0.1-literal ephemeral-server tests.
+      lookup: (_hostname, options, callback) => {
+        if (options.all) {
+          callback(null, [{ address: pinnedIp, family }]);
+        } else {
+          callback(null, pinnedIp, family);
+        }
       },
     },
   });
