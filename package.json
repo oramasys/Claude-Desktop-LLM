@@ -13,7 +13,7 @@
     "start:ollama": "node dist/entrypoints/ollama.js",
     "start:lmstudio": "node dist/entrypoints/lmstudio.js",
     "dev": "tsx src/entrypoints/combined.ts",
-    "test": "node --import tsx/esm --test tests/*.test.ts",
+    "test": "node --import tsx/esm --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=80 --test-coverage-branches=80 --test tests/*.test.ts",
     "prepare": "npm run build"
   },
   "keywords": [
@@ -37,6 +37,6 @@
     "tsx": "^4.7.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   }
 }

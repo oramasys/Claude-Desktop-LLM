@@ -1,4 +1,5 @@
 import { guardedFetch, type EndpointPolicyOptions } from "../policy/endpoint-policy.js";
+import type { TelosBridgeClient } from "../policy/telos-bridge.js";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -73,6 +74,8 @@ export async function timed<T>(
 
 export interface ProviderDeps {
   endpointPolicy: EndpointPolicyOptions;
+  /** Dependency-injection seam for deterministic consumer tests; production omits it. */
+  telosClient?: TelosBridgeClient;
   observe?: ObservationSink;
 }
 
@@ -106,7 +109,12 @@ export async function fetchJson(
   };
 
   try {
-    const response = await guardedFetch(url, { ...init, signal: controller.signal }, deps.endpointPolicy);
+    const response = await guardedFetch(
+      url,
+      { ...init, signal: controller.signal },
+      deps.endpointPolicy,
+      deps.telosClient,
+    );
     if (!response.ok) {
       finish();
       return { ok: response.ok, status: response.status, statusText: response.statusText, json: () => response.json(), finish };
