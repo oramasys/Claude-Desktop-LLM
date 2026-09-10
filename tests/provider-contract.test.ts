@@ -3,8 +3,40 @@ import { createServer, type Server } from "node:http";
 import { after, before, describe, test } from "node:test";
 import { LMStudioProvider } from "../src/providers/lmstudio.js";
 import { OllamaProvider } from "../src/providers/ollama.js";
+import type { TelosBridgeClient, TelosBridgeEnvelope, TelosBridgeRequest } from "../src/policy/telos-bridge.js";
 
-const ALLOW_LOOPBACK = { allowRemoteLlm: false, allowedLlmHosts: [] as string[] };
+/**
+ * Provider protocol tests do not retest Telos security. This injected client
+ * acts only as a deterministic transport double so provider parsing/timeouts
+ * remain independently testable without requiring a Python Telos install.
+ */
+class LoopbackTelosClient implements TelosBridgeClient {
+  async request(payload: TelosBridgeRequest, signal?: AbortSignal): Promise<TelosBridgeEnvelope> {
+    const body = payload.body_base64 === undefined ? undefined : Buffer.from(payload.body_base64, "base64");
+    const response = await fetch(payload.url, {
+      method: payload.method,
+      headers: payload.headers,
+      body,
+      signal,
+      redirect: "manual",
+    });
+    const responseBody = Buffer.from(await response.arrayBuffer());
+    const parsed = new URL(payload.url);
+    return {
+      ok_bridge: true,
+      result: {
+        ok: response.ok,
+        status: response.status,
+        headers: Array.from(response.headers.entries()),
+        body_base64: responseBody.toString("base64"),
+        final_url: payload.url,
+        endpoint: [parsed.protocol.slice(0, -1), parsed.hostname, Number(parsed.port || (parsed.protocol === "https:" ? 443 : 80))],
+      },
+    };
+  }
+}
+
+const TEST_TELOS = new LoopbackTelosClient();
 
 function listen(server: Server): Promise<number> {
   return new Promise((resolve) => {
@@ -22,10 +54,7 @@ describe("Ollama provider contract (against a local ephemeral mock server)", () 
 
   before(async () => {
     server = createServer((req, res) => {
-      if (mode === "timeout") {
-        // Never respond -- exercises the client's own timeout handling.
-        return;
-      }
+      if (mode === "timeout") return;
       if (mode === "partial") {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.write('{"response":"partial');
@@ -74,12 +103,23 @@ describe("Ollama provider contract (against a local ephemeral mock server)", () 
   });
   after(() => server.close());
 
+  function deps() {
+    return {
+      endpointPolicy: {
+        allowRemoteLlm: false,
+        allowedLlmHosts: [] as string[],
+        allowedEndpoints: [baseUrl],
+      },
+      telosClient: TEST_TELOS,
+    };
+  }
+
   function makeProvider(timeoutMs = 2000): OllamaProvider {
-    return new OllamaProvider({ baseUrl, defaultModel: "llama3.2", timeoutMs }, { endpointPolicy: ALLOW_LOOPBACK });
+    return new OllamaProvider({ baseUrl, defaultModel: "llama3.2", timeoutMs }, deps());
   }
 
   function makeLmStudioProvider(timeoutMs = 2000): LMStudioProvider {
-    return new LMStudioProvider({ baseUrl, defaultModel: "default", timeoutMs }, { endpointPolicy: ALLOW_LOOPBACK });
+    return new LMStudioProvider({ baseUrl, defaultModel: "default", timeoutMs }, deps());
   }
 
   test("listModels", async () => {
