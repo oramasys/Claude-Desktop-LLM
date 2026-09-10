@@ -98,4 +98,29 @@ describe("Telos endpoint-policy façade", () => {
     );
     assert.equal(client.seen.length, 0);
   });
+
+  for (const status of [204, 205, 304]) {
+    test(`constructs a null-body Response for status ${status}`, async () => {
+      const envelope: TelosBridgeEnvelope = {
+        ok_bridge: true,
+        result: {
+          ok: true,
+          status,
+          headers: [],
+          body_base64: "",
+          final_url: "http://localhost:11434/api/tags",
+          endpoint: ["http", "localhost", 11434],
+        },
+      };
+      const client = new FakeClient(envelope);
+      // The real bug this fix closes: constructing Response with a non-null
+      // body (even an empty Buffer) for these statuses throws per the Fetch
+      // spec's null-body-status list -- verified directly in Node before
+      // writing this test. A pre-fix guardedFetch call would reject here,
+      // not just return an empty body.
+      const response = await guardedFetch("http://localhost:11434/api/tags", {}, LOCAL, client);
+      assert.equal(response.status, status);
+      assert.equal(response.body, null);
+    });
+  }
 });

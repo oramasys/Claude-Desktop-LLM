@@ -53,12 +53,17 @@ function headersRecord(headers: HeadersInit | undefined): Record<string, string>
   return Object.fromEntries(new Headers(headers).entries());
 }
 
+const NULL_BODY_STATUSES = new Set([204, 205, 304]);
+
 function toResponse(envelope: TelosBridgeEnvelope): Response {
   if (!envelope.ok_bridge) {
     throw new EndpointPolicyError(envelope.error.message, envelope.error.code);
   }
   const result = envelope.result;
-  return new Response(Buffer.from(result.body_base64, "base64"), {
+  const body = NULL_BODY_STATUSES.has(result.status)
+    ? null
+    : Buffer.from(result.body_base64, "base64");
+  return new Response(body, {
     status: result.status,
     statusText: STATUS_CODES[result.status] ?? "",
     headers: result.headers,

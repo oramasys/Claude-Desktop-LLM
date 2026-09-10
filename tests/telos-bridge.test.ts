@@ -53,4 +53,43 @@ describe("PythonTelosBridgeClient", () => {
       (err: unknown) => err instanceof Error && err.name === "AbortError",
     );
   });
+
+  test("rejects ok_bridge:true without a result", async () => {
+    const script = `process.stdin.resume(); process.stdin.on('end', () => process.stdout.write(JSON.stringify({ok_bridge:true})+'\\n'));`;
+    await assert.rejects(
+      () => nodeClient(script).request(PAYLOAD),
+      (err: unknown) => err instanceof Error && /without a result/.test(err.message),
+    );
+  });
+
+  test("rejects ok_bridge:false without an error", async () => {
+    const script = `process.stdin.resume(); process.stdin.on('end', () => process.stdout.write(JSON.stringify({ok_bridge:false})+'\\n'));`;
+    await assert.rejects(
+      () => nodeClient(script).request(PAYLOAD),
+      (err: unknown) => err instanceof Error && /without an error/.test(err.message),
+    );
+  });
+
+  test("escalates to SIGKILL when the process ignores SIGTERM", async () => {
+    // A script that swallows SIGTERM entirely -- without the escalation fix,
+    // cancellation would hang until the outer test timeout, not the bounded
+    // grace period. SIGKILL cannot be caught or ignored, so this proves the
+    // escalation genuinely fires rather than just asserting a timer exists.
+    const script = `
+      process.on('SIGTERM', () => {});
+      process.stdin.resume();
+      setTimeout(() => {}, 30000);
+    `;
+    const controller = new AbortController();
+    const pending = nodeClient(script).request(PAYLOAD, controller.signal);
+    setTimeout(() => controller.abort(), 20);
+    const start = Date.now();
+    await assert.rejects(
+      () => pending,
+      (err: unknown) => err instanceof Error && err.name === "AbortError",
+    );
+    const elapsed = Date.now() - start;
+    // Must resolve via the ~2s SIGKILL grace period, not hang indefinitely.
+    assert.ok(elapsed < 5000, `expected termination well under 5s, took ${elapsed}ms`);
+  });
 });

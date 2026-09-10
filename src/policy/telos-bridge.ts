@@ -77,15 +77,21 @@ export class PythonTelosBridgeClient implements TelosBridgeClient {
       stderr += chunk;
     });
 
+    const SIGKILL_GRACE_MS = 2000;
+    let killTimer: NodeJS.Timeout | undefined;
     const onAbort = () => {
       aborted = true;
       child.kill("SIGTERM");
+      killTimer = setTimeout(() => {
+        child.kill("SIGKILL");
+      }, SIGKILL_GRACE_MS);
     };
     signal?.addEventListener("abort", onAbort, { once: true });
 
     try {
       child.stdin.end(JSON.stringify(payload) + "\n");
       const [code] = (await once(child, "close")) as [number | null, NodeJS.Signals | null];
+      if (killTimer) clearTimeout(killTimer);
       if (aborted || signal?.aborted) throw abortError(signal);
       if (code !== 0) {
         throw new Error(`Telos bridge exited with code ${String(code)}: ${stderr.trim()}`);
@@ -101,8 +107,15 @@ export class PythonTelosBridgeClient implements TelosBridgeClient {
       if (typeof parsed !== "object" || parsed === null || typeof parsed.ok_bridge !== "boolean") {
         throw new Error("Telos bridge returned an invalid envelope");
       }
+      if (parsed.ok_bridge && (typeof parsed.result !== "object" || parsed.result === null)) {
+        throw new Error("Telos bridge returned ok_bridge:true without a result");
+      }
+      if (!parsed.ok_bridge && (typeof parsed.error !== "object" || parsed.error === null)) {
+        throw new Error("Telos bridge returned ok_bridge:false without an error");
+      }
       return parsed;
     } finally {
+      if (killTimer) clearTimeout(killTimer);
       signal?.removeEventListener("abort", onAbort);
     }
   }
